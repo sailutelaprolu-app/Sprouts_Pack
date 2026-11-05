@@ -3,6 +3,7 @@ services:
     name: your-sprouts
     runtime: python
     plan: free
+    region: singapore
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
