@@ -40,11 +40,12 @@ Works in **English and Telugu** (choose on the first screen, switch anytime with
 
 | Key | Value |
 |---|---|
-| `SECRET_KEY` | Any long random text, e.g. `k8Zq...` (40+ characters). Keep it private |
-| `ADMIN_SECRET` | Your own administrator Secret ID, e.g. `SPROUT-ADMIN-2026`. This is what **you** type to log in as administrator |
-| `DB_PATH` | `/var/data/sprouts.db` (only if you add a disk, see step 4) |
+| `SECRET_KEY` | Any long random text (40+ characters). Keep it private |
+| `ADMIN_SECRET` | Your own administrator Secret ID, e.g. `SPROUT-ADMIN-2026` |
+| `DATABASE_URL` | Your Supabase **Session pooler** connection string (see below) |
 
-4. **Important: keep your data safe.** On Render's free plan, the data file is wiped every time the app restarts or you upload new code. To keep data permanently, choose a paid instance and add a **Disk** (Settings → Disks → mount path `/var/data`, 1 GB is plenty), then set `DB_PATH` as above.
+4. **Data is kept in Supabase**, so it survives every update and restart, even on Render's free plan.
+   To get the connection string: Supabase → your project → **Connect** → **Session pooler** → copy the line starting with `postgresql://`, and replace `[YOUR-PASSWORD]` with your database password.
 5. Click **Create Web Service**. After a few minutes you get a link like `your-sprouts.onrender.com`.
 
 ### 3. Use your own domain (optional)
@@ -85,4 +86,5 @@ Rules built into the app. ✅ = you decided. ❓ = I chose a sensible default �
 | 18 | No email anywhere: customers are added with name, mobile and price only | ✅ |
 | 19 | When new files are uploaded, phones show **"New version available – tap to update"** (checked when the app is opened, and every 30 minutes) | ✅ |
 | 20 | Vendor and customer Secret IDs are **5 characters** (letters and numbers, e.g. `K7MP2`); every new ID is checked so no two people get the same one | ✅ |
-| 21 | Telugu wording was written by me — a native speaker should read it once and correct it in `translations.py` | ❓ |
+| 21 | All data is stored in **Supabase** (PostgreSQL), so updates and restarts never erase vendors, customers or entries | ✅ |
+| 22 | Telugu wording was written by me — a native speaker should read it once and correct it in `translations.py` | ❓ |

@@ -22,7 +22,6 @@ from flask import (Flask, abort, flash, g, redirect, render_template, request,
 from translations import TEXT
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.environ.get("DB_PATH", os.path.join(HERE, "sprouts.db"))
 IST = timezone(timedelta(hours=5, minutes=30))
 APP_NAME = "Your Sprouts"
 
@@ -55,20 +54,29 @@ app.config.update(
 
 
 # ---------------------------------------------------------------- database
+# Where the data is kept:
+#   * DATABASE_URL set (Supabase / PostgreSQL)  -> permanent, survives every update and restart
+#   * DATABASE_URL not set                      -> a local file (sprouts.db), only for testing on a computer
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+USE_POSTGRES = DATABASE_URL.startswith(("postgres://", "postgresql://"))
+if USE_POSTGRES:
+    import psycopg
+    from psycopg.rows import dict_row
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE IF NOT EXISTS vendors (
-    id INTEGER PRIMARY KEY, name TEXT NOT NULL, mobile TEXT,
+    id SERIALKEY, name TEXT NOT NULL, mobile TEXT,
     secret_hash TEXT UNIQUE NOT NULL, active INTEGER DEFAULT 1, created_at TEXT);
 CREATE TABLE IF NOT EXISTS customers (
-    id INTEGER PRIMARY KEY, vendor_id INTEGER NOT NULL REFERENCES vendors(id),
-    name TEXT NOT NULL, mobile TEXT, email TEXT,
+    id SERIALKEY, vendor_id INTEGER NOT NULL REFERENCES vendors(id),
+    name TEXT NOT NULL, mobile TEXT,
     secret_hash TEXT UNIQUE NOT NULL, active INTEGER DEFAULT 1, created_at TEXT);
 CREATE TABLE IF NOT EXISTS prices (
-    id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL REFERENCES customers(id),
+    id SERIALKEY, customer_id INTEGER NOT NULL REFERENCES customers(id),
     paise INTEGER NOT NULL, effective_from TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS price_changes (
-    id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL REFERENCES customers(id),
+    id SERIALKEY, customer_id INTEGER NOT NULL REFERENCES customers(id),
     old_paise INTEGER, new_paise INTEGER NOT NULL, effective_from TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending', created_at TEXT, decided_at TEXT);
 CREATE TABLE IF NOT EXISTS entries (
@@ -80,20 +88,54 @@ CREATE TABLE IF NOT EXISTS payments (
     customer_id INTEGER NOT NULL REFERENCES customers(id), month TEXT NOT NULL,
     paid INTEGER DEFAULT 0, paid_on TEXT, PRIMARY KEY (customer_id, month));
 CREATE TABLE IF NOT EXISTS requests (
-    id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL REFERENCES customers(id),
+    id SERIALKEY, customer_id INTEGER NOT NULL REFERENCES customers(id),
     text TEXT NOT NULL, status TEXT DEFAULT 'open', reply TEXT,
     created_at TEXT, closed_at TEXT);
 CREATE TABLE IF NOT EXISTS audit (
-    id INTEGER PRIMARY KEY, at TEXT, role TEXT, actor_id INTEGER, actor_name TEXT,
+    id SERIALKEY, at TEXT, role TEXT, actor_id INTEGER, actor_name TEXT,
     vendor_id INTEGER, action TEXT, details TEXT);
 """
 
 
+class Database:
+    """One small wrapper so the rest of the app works the same with Supabase or a local file."""
+
+    def __init__(self):
+        if USE_POSTGRES:
+            extra = {} if "sslmode=" in DATABASE_URL else {"sslmode": "require"}
+            self.raw = psycopg.connect(DATABASE_URL, row_factory=dict_row, prepare_threshold=None,
+                                       connect_timeout=15, **extra)
+        else:
+            self.raw = sqlite3.connect(os.environ.get("DB_PATH", os.path.join(HERE, "sprouts.db")))
+            self.raw.row_factory = sqlite3.Row
+            self.raw.execute("PRAGMA foreign_keys = ON")
+
+    def execute(self, sql, params=()):
+        if USE_POSTGRES:
+            cur = self.raw.cursor()
+            cur.execute(sql.replace("?", "%s"), params)
+            return cur
+        return self.raw.execute(sql, params)
+
+    def insert(self, sql, params=()):
+        """Run an INSERT and return the new row's id."""
+        if USE_POSTGRES:
+            return self.execute(sql + " RETURNING id", params).fetchone()["id"]
+        return self.raw.execute(sql, params).lastrowid
+
+    def commit(self):
+        self.raw.commit()
+
+    def rollback(self):
+        self.raw.rollback()
+
+    def close(self):
+        self.raw.close()
+
+
 def db():
     if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
+        g.db = Database()
     return g.db
 
 
@@ -101,19 +143,25 @@ def db():
 def close_db(_exc):
     conn = g.pop("db", None)
     if conn is not None:
-        conn.close()
+        try:
+            conn.rollback()  # anything not saved on purpose is thrown away
+        finally:
+            conn.close()
 
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.executescript(SCHEMA)
+    conn = Database()
+    key = "SERIAL PRIMARY KEY" if USE_POSTGRES else "INTEGER PRIMARY KEY"
+    for statement in SCHEMA.replace("SERIALKEY", key).split(";"):
+        if statement.strip():
+            conn.execute(statement)
     env_secret = os.environ.get("ADMIN_SECRET", "").strip()
     if env_secret:
-        conn.execute("INSERT OR REPLACE INTO settings VALUES ('admin_hash', ?)",
-                     (hash_secret(env_secret),))
+        conn.execute("INSERT INTO settings (key, value) VALUES ('admin_hash', ?) "
+                     "ON CONFLICT (key) DO UPDATE SET value = excluded.value", (hash_secret(env_secret),))
     elif not conn.execute("SELECT 1 FROM settings WHERE key='admin_hash'").fetchone():
         new_id = make_secret(conn) + make_secret(conn)  # administrator's own ID stays longer for safety
-        conn.execute("INSERT INTO settings VALUES ('admin_hash', ?)", (hash_secret(new_id),))
+        conn.execute("INSERT INTO settings (key, value) VALUES ('admin_hash', ?)", (hash_secret(new_id),))
         print("=" * 50, flush=True)
         print(f"  ADMINISTRATOR SECRET ID: {new_id}", flush=True)
         print("  Write this down. It is shown only once.", flush=True)
@@ -437,9 +485,9 @@ def admin_add_vendor():
         return redirect(url_for("admin_home"))
     secret = make_secret()
     conn = db()
-    cur = conn.execute("INSERT INTO vendors (name, mobile, secret_hash, created_at) VALUES (?,?,?,?)",
-                       (name, mobile, hash_secret(secret), stamp()))
-    audit("vendor_added", f"{name} ({mobile})", vendor_id=cur.lastrowid)
+    new_vid = conn.insert("INSERT INTO vendors (name, mobile, secret_hash, created_at) VALUES (?,?,?,?)",
+                          (name, mobile, hash_secret(secret), stamp()))
+    audit("vendor_added", f"{name} ({mobile})", vendor_id=new_vid)
     conn.commit()
     return render_template("secret.html", who=name, secret=secret, back=url_for("admin_home"))
 
@@ -509,8 +557,8 @@ def counts_for_badges():
     vid = session.get("uid")
     conn = db()
     open_req = conn.execute(
-        "SELECT COUNT(*) FROM requests r JOIN customers c ON c.id=r.customer_id "
-        "WHERE c.vendor_id=? AND r.status='open'", (vid,)).fetchone()[0]
+        "SELECT COUNT(*) AS n FROM requests r JOIN customers c ON c.id=r.customer_id "
+        "WHERE c.vendor_id=? AND r.status='open'", (vid,)).fetchone()["n"]
     return {"open_requests": open_req}
 
 
@@ -598,11 +646,11 @@ def vendor_add_customer():
         return redirect(url_for("vendor_customers"))
     secret = make_secret()
     conn = db()
-    cur = conn.execute(
+    new_cid = conn.insert(
         "INSERT INTO customers (vendor_id, name, mobile, secret_hash, created_at) VALUES (?,?,?,?,?)",
         (session["uid"], name, mobile, hash_secret(secret), stamp()))
     conn.execute("INSERT INTO prices (customer_id, paise, effective_from) VALUES (?,?,?)",
-                 (cur.lastrowid, paise, "2000-01-01"))
+                 (new_cid, paise, "2000-01-01"))
     audit("customer_added", f"{name} @ {rupees(paise)}/packet")
     conn.commit()
     return render_template("secret.html", who=name, secret=secret, back=url_for("vendor_customers"))

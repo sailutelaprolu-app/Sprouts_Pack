@@ -10,3 +10,5 @@ services:
         generateValue: true
       - key: ADMIN_SECRET
         sync: false
+      - key: DATABASE_URL
+        sync: false
