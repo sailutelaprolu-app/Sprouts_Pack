@@ -16,7 +16,6 @@
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <label>{{ t('name') }} <input name="name" value="{{ c.name }}" maxlength="80"></label>
     <label>{{ t('mobile') }} <input name="mobile" value="{{ c.mobile or '' }}" inputmode="tel" maxlength="15"></label>
-    <label>{{ t('email') }} <input name="email" type="email" value="{{ c.email or '' }}" maxlength="120"></label>
     <button class="btn small" type="submit">{{ t('save') }}</button>
   </form>
 </div>

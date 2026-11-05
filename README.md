@@ -54,7 +54,7 @@ On Hostinger: **Domains → DNS / Nameservers → Add record** → Type `CNAME`,
 ### 4. First use
 1. Open the link → choose language → log in with your `ADMIN_SECRET`.
 2. **Add a vendor** → the app shows their Secret ID **once**. Send it to them.
-3. The vendor logs in → **Customers → Add a customer** (name, mobile, email, price per packet) → shares the customer's Secret ID.
+3. The vendor logs in → **Customers → Add a customer** (name, mobile, price per packet) → shares the customer's Secret ID.
 4. On a phone, open the link in Chrome → tap **Install app** (or menu → *Add to Home screen*).
 
 ---
@@ -82,4 +82,6 @@ Rules built into the app. ✅ = you decided. ❓ = I chose a sensible default �
 | 15 | Deactivating a vendor also blocks all their customers from logging in | ❓ |
 | 16 | 10 wrong Secret ID attempts → that device waits 15 minutes | ❓ |
 | 17 | The administrator sees the activity history for everyone; vendors and customers don't see it | ❓ |
-| 18 | Telugu wording was written by me — a native speaker should read it once and correct it in `translations.py` | ❓ |
+| 18 | No email anywhere: customers are added with name, mobile and price only | ✅ |
+| 19 | When new files are uploaded, phones show **"New version available – tap to update"** (checked when the app is opened, and every 30 minutes) | ✅ |
+| 20 | Telugu wording was written by me — a native speaker should read it once and correct it in `translations.py` | ❓ |

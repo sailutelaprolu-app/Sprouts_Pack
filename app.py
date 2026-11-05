@@ -29,6 +29,21 @@ APP_NAME = "Your Sprouts"
 # Only these files may be downloaded from the folder (so app.py and the database stay private).
 PUBLIC_FILES = {"style.css", "app.js", "icon-192.png", "icon-512.png", "favicon.png"}
 
+
+
+def compute_version():
+    """A fingerprint of all app files. It changes automatically whenever you upload new files,
+    which makes installed phones show the 'New version available' message."""
+    h = hashlib.sha256()
+    for name in sorted(os.listdir(HERE)):
+        if name.endswith((".py", ".html", ".css", ".js", ".json", ".png")):
+            with open(os.path.join(HERE, name), "rb") as f:
+                h.update(name.encode() + f.read())
+    return h.hexdigest()[:10]
+
+
+APP_VERSION = compute_version()
+
 app = Flask(__name__, template_folder=HERE, static_folder=None)
 app.config.update(
     SECRET_KEY=os.environ.get("SECRET_KEY") or "dev-only-change-me",
@@ -272,7 +287,7 @@ def t(key, **kwargs):
 def inject():
     return {"t": t, "lang": lang() or "en", "rupees": rupees, "APP_NAME": APP_NAME,
             "role": session.get("role"), "me": session.get("name"),
-            "csrf": csrf_token(), "today": today().isoformat()}
+            "csrf": csrf_token(), "today": today().isoformat(), "version": APP_VERSION}
 
 
 @app.route("/lang/<code>")
@@ -563,7 +578,6 @@ def vendor_customers():
 def vendor_add_customer():
     name = request.form.get("name", "").strip()
     mobile = request.form.get("mobile", "").strip()
-    email = request.form.get("email", "").strip()
     paise = to_paise(request.form.get("price"))
     if not name:
         flash(t("name_required"), "error")
@@ -574,8 +588,8 @@ def vendor_add_customer():
     secret = make_secret()
     conn = db()
     cur = conn.execute(
-        "INSERT INTO customers (vendor_id, name, mobile, email, secret_hash, created_at) VALUES (?,?,?,?,?,?)",
-        (session["uid"], name, mobile, email, hash_secret(secret), stamp()))
+        "INSERT INTO customers (vendor_id, name, mobile, secret_hash, created_at) VALUES (?,?,?,?,?)",
+        (session["uid"], name, mobile, hash_secret(secret), stamp()))
     conn.execute("INSERT INTO prices (customer_id, paise, effective_from) VALUES (?,?,?)",
                  (cur.lastrowid, paise, "2000-01-01"))
     audit("customer_added", f"{name} @ {rupees(paise)}/packet")
@@ -602,8 +616,7 @@ def vendor_edit_customer(cid):
     c = own_customer(cid)
     name = request.form.get("name", "").strip() or c["name"]
     mobile = request.form.get("mobile", "").strip()
-    email = request.form.get("email", "").strip()
-    db().execute("UPDATE customers SET name=?, mobile=?, email=? WHERE id=?", (name, mobile, email, cid))
+    db().execute("UPDATE customers SET name=?, mobile=? WHERE id=?", (name, mobile, cid))
     audit("customer_edited", name)
     db().commit()
     flash(t("saved"), "ok")
@@ -862,7 +875,9 @@ def manifest():
 
 @app.route("/sw.js")
 def service_worker():
-    resp = send_from_directory(HERE, "sw.js", mimetype="application/javascript")
+    with open(os.path.join(HERE, "sw.js"), encoding="utf-8") as f:
+        code = f.read().replace("__VERSION__", APP_VERSION)
+    resp = app.response_class(code, mimetype="application/javascript")
     resp.headers["Cache-Control"] = "no-cache"
     return resp
 

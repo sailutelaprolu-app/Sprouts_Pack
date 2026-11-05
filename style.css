@@ -48,6 +48,18 @@ main { max-width: 640px; margin: 0 auto; padding: 12px 16px 24px; }
 .tag { background: var(--leaf-soft); color: var(--leaf); border-radius: 999px; padding: 1px 8px; font-size: .8rem; font-weight: 700; }
 .inline { display: inline; margin: 0; }
 
+/* new version bar */
+.update-bar {
+  position: sticky; top: calc(56px + env(safe-area-inset-top)); z-index: 9; display: flex; align-items: center;
+  justify-content: space-between; gap: 10px; background: var(--sprout); color: var(--ink);
+  padding: 10px 16px; font-weight: 800; box-shadow: var(--shadow);
+}
+.update-bar[hidden] { display: none; }
+.update-bar button {
+  background: var(--leaf); color: #fff; border: none; border-radius: 999px; padding: 8px 16px;
+  font: inherit; font-weight: 800; cursor: pointer; white-space: nowrap;
+}
+
 /* bottom tabs */
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: space-around;

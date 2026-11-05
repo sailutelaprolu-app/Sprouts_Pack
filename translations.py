@@ -7,6 +7,8 @@ TEXT = {
     # ---------- general
     "app_name": {"en": "Your Sprouts", "te": "Your Sprouts"},
     "tagline": {"en": "Fresh sprout packets, tracked simply", "te": "తాజా మొలకల ప్యాకెట్లు, సులభంగా లెక్క"},
+    "new_version": {"en": "New version available", "te": "కొత్త వెర్షన్ అందుబాటులో ఉంది"},
+    "tap_to_update": {"en": "Tap to update", "te": "అప్‌డేట్ చేయడానికి నొక్కండి"},
     "install": {"en": "Install app", "te": "యాప్ ఇన్‌స్టాల్"},
     "logout": {"en": "Log out", "te": "లాగ్ అవుట్"},
     "hello": {"en": "Hello", "te": "నమస్తే"},
@@ -26,7 +28,6 @@ TEXT = {
     "nothing_yet": {"en": "Nothing here yet.", "te": "ఇంకా ఏమీ లేదు."},
     "name": {"en": "Name", "te": "పేరు"},
     "mobile": {"en": "Mobile number", "te": "మొబైల్ నంబర్"},
-    "email": {"en": "Email", "te": "ఈమెయిల్"},
     "date": {"en": "Date", "te": "తేదీ"},
     "amount": {"en": "Amount", "te": "మొత్తం"},
     "packet": {"en": "packet", "te": "ప్యాకెట్"},

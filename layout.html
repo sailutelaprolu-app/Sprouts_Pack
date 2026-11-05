@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Tammudu+2:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v={{ version }}">
 </head>
 <body class="lang-{{ lang }}">
 <header class="top">
@@ -38,6 +38,11 @@
 <div class="hello">{{ t('hello') }}, <b>{{ me }}</b>{% if role != 'customer' %} · <span class="tag">{{ t('role_' + role) }}</span>{% endif %}</div>
 {% endif %}
 
+<div class="update-bar" id="updateBar" hidden>
+  <span>✨ {{ t('new_version') }}</span>
+  <button type="button" id="updateBtn">{{ t('tap_to_update') }}</button>
+</div>
+
 <main>
   {% with msgs = get_flashed_messages(with_categories=true) %}
     {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
@@ -64,6 +69,6 @@
   <a href="/admin/audit" class="{{ 'on' if request.path.startswith('/admin/audit') }}"><span class="ico">📜</span>{{ t('nav_audit') }}</a>
 </nav>
 {% endif %}
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v={{ version }}"></script>
 </body>
 </html>

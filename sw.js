@@ -1,9 +1,18 @@
-// Your Sprouts - service worker (lets the app install on phones and show a friendly offline page)
-const CACHE = "your-sprouts-v1";
+// Your Sprouts - service worker (makes the app installable and tells phones when a new version is uploaded)
+// __VERSION__ is filled in automatically by app.py. It changes every time new files are uploaded.
+const VERSION = "__VERSION__";
+const CACHE = "your-sprouts-" + VERSION;
 const FILES = ["/static/style.css", "/static/app.js", "/static/icon-192.png", "/static/icon-512.png", "/offline"];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // Download the new version's files, then wait until the user taps "Tap to update".
+  e.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(FILES.map((u) => new Request(u, { cache: "reload" }))))
+  );
+});
+
+self.addEventListener("message", (e) => {
+  if (e.data === "update-now") self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
@@ -19,16 +28,8 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
   if (url.pathname.startsWith("/static/")) {
-    // files: use saved copy, refresh in background
-    e.respondWith(
-      caches.match(req).then((hit) => {
-        const fresh = fetch(req).then((res) => {
-          caches.open(CACHE).then((c) => c.put(req, res.clone()));
-          return res;
-        }).catch(() => hit);
-        return hit || fresh;
-      })
-    );
+    // files: use this version's saved copy, fall back to the internet
+    e.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req)));
     return;
   }
   if (req.mode === "navigate") {
