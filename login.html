@@ -8,7 +8,7 @@
 <form method="post" class="card narrow" autocomplete="off">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <label for="secret">{{ t('enter_secret') }}</label>
-  <input id="secret" name="secret" class="secret-input" placeholder="XXXXX-XXXXX" required
+  <input id="secret" name="secret" class="secret-input" placeholder="XXXXX" required
          autocapitalize="characters" spellcheck="false" maxlength="20">
   <button class="btn full" type="submit">{{ t('login') }}</button>
   <p class="hint">{{ t('secret_hint') }}</p>

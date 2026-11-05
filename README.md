@@ -84,4 +84,5 @@ Rules built into the app. ✅ = you decided. ❓ = I chose a sensible default �
 | 17 | The administrator sees the activity history for everyone; vendors and customers don't see it | ❓ |
 | 18 | No email anywhere: customers are added with name, mobile and price only | ✅ |
 | 19 | When new files are uploaded, phones show **"New version available – tap to update"** (checked when the app is opened, and every 30 minutes) | ✅ |
-| 20 | Telugu wording was written by me — a native speaker should read it once and correct it in `translations.py` | ❓ |
+| 20 | Vendor and customer Secret IDs are **5 characters** (letters and numbers, e.g. `K7MP2`); every new ID is checked so no two people get the same one | ✅ |
+| 21 | Telugu wording was written by me — a native speaker should read it once and correct it in `translations.py` | ❓ |

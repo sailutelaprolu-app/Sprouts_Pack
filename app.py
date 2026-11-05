@@ -112,7 +112,7 @@ def init_db():
         conn.execute("INSERT OR REPLACE INTO settings VALUES ('admin_hash', ?)",
                      (hash_secret(env_secret),))
     elif not conn.execute("SELECT 1 FROM settings WHERE key='admin_hash'").fetchone():
-        new_id = make_secret()
+        new_id = make_secret(conn) + make_secret(conn)  # administrator's own ID stays longer for safety
         conn.execute("INSERT INTO settings VALUES ('admin_hash', ?)", (hash_secret(new_id),))
         print("=" * 50, flush=True)
         print(f"  ADMINISTRATOR SECRET ID: {new_id}", flush=True)
@@ -126,9 +126,20 @@ def init_db():
 ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I to avoid confusion
 
 
-def make_secret():
-    raw = "".join(secrets.choice(ALPHABET) for _ in range(10))
-    return f"{raw[:5]}-{raw[5:]}"
+SECRET_LENGTH = 5  # Secret IDs for vendors and customers are 5 characters, e.g. K7MP2
+
+
+def make_secret(conn=None):
+    """Make a new random Secret ID that nobody else is using."""
+    conn = conn or db()
+    while True:
+        new_id = "".join(secrets.choice(ALPHABET) for _ in range(SECRET_LENGTH))
+        h = hash_secret(new_id)
+        taken = (conn.execute("SELECT 1 FROM vendors WHERE secret_hash=?", (h,)).fetchone()
+                 or conn.execute("SELECT 1 FROM customers WHERE secret_hash=?", (h,)).fetchone()
+                 or conn.execute("SELECT 1 FROM settings WHERE key='admin_hash' AND value=?", (h,)).fetchone())
+        if not taken:
+            return new_id
 
 
 def clean_secret(value):
