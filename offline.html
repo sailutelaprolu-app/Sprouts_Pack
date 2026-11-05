@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card narrow center">
+  <div class="big-ico">📶</div>
+  <h2>{{ t('offline_title') }}</h2>
+  <p class="muted">{{ t('offline_body') }}</p>
+  <a class="btn" href="/">{{ t('try_again') }}</a>
+</section>
+{% endblock %}

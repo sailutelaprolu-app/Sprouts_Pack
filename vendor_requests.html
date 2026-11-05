@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2 class="section">{{ t('customer_requests') }}</h2>
+{% if not rows %}<p class="empty">{{ t('no_requests') }}</p>{% endif %}
+{% for r in rows %}
+<div class="card item {{ 'done' if r.status == 'done' }}">
+  <div class="item-head">
+    <div class="item-title">{{ r.cname }}</div>
+    <span class="pill {{ 'ok' if r.status == 'done' else 'wait' }}">{{ t('rs_' + r.status) }}</span>
+  </div>
+  <div class="muted small">{{ r.created_at }}</div>
+  <p class="req-text">{{ r.text }}</p>
+  {% if r.status == 'done' %}
+    {% if r.reply %}<div class="reply small">↩ {{ r.reply }}</div>{% endif %}
+  {% else %}
+  <form method="post" action="/vendor/requests/{{ r.id }}/reply" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <textarea name="reply" rows="2" maxlength="1000" placeholder="{{ t('reply_optional') }}"></textarea>
+    <button class="btn small" type="submit">{{ t('mark_done') }}</button>
+  </form>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

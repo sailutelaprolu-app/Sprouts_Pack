@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="welcome">
+  <img src="/static/icon-512.png" alt="" class="hero-logo" width="120" height="120">
+  <h1>Your Sprouts</h1>
+  <p class="te big">మీ మొలకలు</p>
+  <p class="muted">Choose your language · మీ భాషను ఎంచుకోండి</p>
+  <div class="lang-choice">
+    <a class="btn big" href="/lang/en?next=/login">English</a>
+    <a class="btn big" href="/lang/te?next=/login">తెలుగు</a>
+  </div>
+</section>
+{% endblock %}

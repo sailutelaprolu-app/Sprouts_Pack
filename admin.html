@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="stats">
+  <div class="stat"><b>{{ vendors|selectattr('active')|list|length }}</b><span>{{ t('active_vendors') }}</span></div>
+  <div class="stat"><b>{{ vendors|sum(attribute='ncust') }}</b><span>{{ t('active_customers') }}</span></div>
+</div>
+
+<details class="card add" {% if not vendors %}open{% endif %}>
+  <summary>➕ {{ t('add_vendor') }}</summary>
+  <form method="post" action="/admin/vendor/add" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ t('name') }} <input name="name" required maxlength="80"></label>
+    <label>{{ t('mobile') }} <input name="mobile" inputmode="tel" maxlength="15"></label>
+    <button class="btn" type="submit">{{ t('create_and_get_id') }}</button>
+  </form>
+</details>
+
+<h2 class="section">{{ t('vendors') }}</h2>
+{% if not vendors %}<p class="empty">{{ t('no_vendors') }}</p>{% endif %}
+{% for v in vendors %}
+<div class="card item {{ 'inactive' if not v.active }}">
+  <div class="item-head">
+    <div>
+      <div class="item-title">{{ v.name }}</div>
+      <div class="muted small">{{ v.mobile or '—' }} · {{ t('n_customers', n=v.ncust) }}</div>
+    </div>
+    <span class="pill {{ 'ok' if v.active else 'off' }}">{{ t('active') if v.active else t('inactive') }}</span>
+  </div>
+  <details>
+    <summary class="small">{{ t('manage') }}</summary>
+    <form method="post" action="/admin/vendor/{{ v.id }}/edit" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ t('name') }} <input name="name" value="{{ v.name }}" maxlength="80"></label>
+      <label>{{ t('mobile') }} <input name="mobile" value="{{ v.mobile or '' }}" inputmode="tel" maxlength="15"></label>
+      <button class="btn small" type="submit">{{ t('save') }}</button>
+    </form>
+    <div class="row-actions">
+      <form method="post" action="/admin/vendor/{{ v.id }}/reset" data-confirm="{{ t('confirm_reset') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn ghost small" type="submit">🔑 {{ t('reset_secret') }}</button>
+      </form>
+      <form method="post" action="/admin/vendor/{{ v.id }}/toggle" data-confirm="{{ t('confirm_toggle') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn ghost small" type="submit">{{ t('deactivate') if v.active else t('activate') }}</button>
+      </form>
+      <a class="btn ghost small" href="/admin/audit?vendor={{ v.id }}">📜 {{ t('history') }}</a>
+    </div>
+  </details>
+</div>
+{% endfor %}
+{% endblock %}

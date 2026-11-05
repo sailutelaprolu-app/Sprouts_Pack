@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+<details class="card add" {% if not customers %}open{% endif %}>
+  <summary>➕ {{ t('add_customer') }}</summary>
+  <form method="post" action="/vendor/customers/add" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ t('name') }} <input name="name" required maxlength="80"></label>
+    <label>{{ t('mobile') }} <input name="mobile" inputmode="tel" maxlength="15"></label>
+    <label>{{ t('email') }} <input name="email" type="email" maxlength="120"></label>
+    <label>{{ t('price_per_packet') }} (₹) <input name="price" inputmode="decimal" required placeholder="0.00"></label>
+    <button class="btn" type="submit">{{ t('create_and_get_id') }}</button>
+  </form>
+</details>
+
+<h2 class="section">{{ t('customers') }} ({{ customers|length }})</h2>
+{% if not customers %}<p class="empty">{{ t('no_customers_yet') }}</p>{% endif %}
+{% for x in customers %}
+<a class="card item link {{ 'inactive' if not x.c.active }}" href="/vendor/customer/{{ x.c.id }}">
+  <div class="item-head">
+    <div>
+      <div class="item-title">{{ x.c.name }}</div>
+      <div class="muted small">{{ x.c.mobile or '—' }}</div>
+    </div>
+    <div class="right">
+      <div class="price">{{ rupees(x.price) }}<span class="small muted">/{{ t('packet') }}</span></div>
+      {% if x.pending %}<span class="pill wait">{{ t('price_pending') }}</span>{% endif %}
+      {% if not x.c.active %}<span class="pill off">{{ t('inactive') }}</span>{% endif %}
+    </div>
+  </div>
+</a>
+{% endfor %}
+{% endblock %}

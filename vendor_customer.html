@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% block content %}
+<a class="back" href="/vendor/customers">‹ {{ t('customers') }}</a>
+<div class="card">
+  <div class="item-head">
+    <div class="item-title big">{{ c.name }}</div>
+    <span class="pill {{ 'ok' if c.active else 'off' }}">{{ t('active') if c.active else t('inactive') }}</span>
+  </div>
+  <div class="price big-price">{{ rupees(price) }} <span class="small muted">/ {{ t('packet') }}</span></div>
+  <a class="btn ghost small" href="/vendor/statement/{{ c.id }}">🧾 {{ t('view_statement') }}</a>
+</div>
+
+<div class="card">
+  <h3>{{ t('details') }}</h3>
+  <form method="post" action="/vendor/customer/{{ c.id }}/edit" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ t('name') }} <input name="name" value="{{ c.name }}" maxlength="80"></label>
+    <label>{{ t('mobile') }} <input name="mobile" value="{{ c.mobile or '' }}" inputmode="tel" maxlength="15"></label>
+    <label>{{ t('email') }} <input name="email" type="email" value="{{ c.email or '' }}" maxlength="120"></label>
+    <button class="btn small" type="submit">{{ t('save') }}</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>{{ t('change_price') }}</h3>
+  <p class="hint">{{ t('price_change_hint') }}</p>
+  {% for ch in changes if ch.status == 'pending' %}
+    <div class="notice wait">
+      ⏳ {{ t('waiting_customer', price=rupees(ch.new_paise), day=ch.effective_from) }}
+      <form method="post" action="/vendor/customer/{{ c.id }}/price/cancel" class="inline">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="link-btn small" type="submit">{{ t('cancel') }}</button>
+      </form>
+    </div>
+  {% endfor %}
+  <form method="post" action="/vendor/customer/{{ c.id }}/price" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ t('new_price') }} (₹) <input name="price" inputmode="decimal" required placeholder="0.00"></label>
+    <label>{{ t('from_date') }} <input type="date" name="effective_from" min="{{ today }}" value="{{ today }}" required></label>
+    <button class="btn small" type="submit">{{ t('send_for_approval') }}</button>
+  </form>
+  {% if changes %}
+  <h4>{{ t('price_history') }}</h4>
+  <ul class="mini-list">
+    {% for ch in changes %}
+      <li>{{ rupees(ch.old_paise) }} → <b>{{ rupees(ch.new_paise) }}</b> {{ t('from') }} {{ ch.effective_from }}
+        <span class="pill {{ {'accepted':'ok','rejected':'off','pending':'wait','cancelled':'off'}[ch.status] }}">{{ t('ps_' + ch.status) }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>{{ t('login_access') }}</h3>
+  <p class="hint">{{ t('reset_hint') }}</p>
+  <div class="row-actions">
+    <form method="post" action="/vendor/customer/{{ c.id }}/reset" data-confirm="{{ t('confirm_reset') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn ghost small" type="submit">🔑 {{ t('reset_secret') }}</button>
+    </form>
+    <form method="post" action="/vendor/customer/{{ c.id }}/toggle" data-confirm="{{ t('confirm_toggle') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn ghost small" type="submit">{{ t('deactivate') if c.active else t('activate') }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

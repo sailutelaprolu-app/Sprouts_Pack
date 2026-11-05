@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="date-nav">
+  <a class="btn ghost small" href="/vendor/month?month={{ prev }}">‹</a>
+  <form method="get"><input type="month" name="month" value="{{ month }}" onchange="this.form.submit()"></form>
+  {% if next %}<a class="btn ghost small" href="/vendor/month?month={{ next }}">›</a>{% else %}<span class="btn ghost small disabled">›</span>{% endif %}
+</div>
+
+<div class="stats">
+  <div class="stat"><b>{{ rows|sum(attribute='s.packets') }}</b><span>{{ t('packets') }}</span></div>
+  <div class="stat due"><b>{{ rupees(due) }}</b><span>{{ t('pending_amount') }}</span></div>
+  <div class="stat ok"><b>{{ rupees(collected) }}</b><span>{{ t('collected') }}</span></div>
+</div>
+
+{% if not rows %}<p class="empty">{{ t('no_customers_yet') }}</p>{% endif %}
+{% for r in rows %}
+<div class="card item">
+  <div class="item-head">
+    <a href="/vendor/statement/{{ r.c.id }}?month={{ month }}">
+      <div class="item-title">{{ r.c.name }} ›</div>
+      <div class="muted small">{{ t('n_packets', n=r.s.packets) }}{% if r.s.mismatches %} · <span class="warn-text">⚠ {{ t('n_mismatch', n=r.s.mismatches) }}</span>{% endif %}</div>
+    </a>
+    <div class="right">
+      <div class="price">{{ rupees(r.s.amount) }}</div>
+      <form method="post" action="/vendor/month/paid">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="customer_id" value="{{ r.c.id }}">
+        <input type="hidden" name="month" value="{{ month }}">
+        {% if r.s.paid %}
+          <input type="hidden" name="paid" value="0">
+          <button class="pill ok as-btn" type="submit" title="{{ t('tap_to_unmark') }}">✓ {{ t('paid') }}</button>
+        {% else %}
+          <input type="hidden" name="paid" value="1">
+          <button class="pill due as-btn" type="submit" title="{{ t('tap_to_mark') }}">{{ t('unpaid') }}</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+<p class="hint">{{ t('paid_hint') }}</p>
+{% endblock %}

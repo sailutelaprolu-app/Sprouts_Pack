@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block content %}
+{% if role == 'vendor' %}<a class="back" href="/vendor/month?month={{ month }}">‹ {{ t('nav_bills') }}</a>{% endif %}
+<h2 class="section">{{ t('statement_of', name=c.name) }}</h2>
+<div class="date-nav">
+  <a class="btn ghost small" href="{{ base }}?month={{ prev }}">‹</a>
+  <form method="get"><input type="month" name="month" value="{{ month }}" onchange="this.form.submit()"></form>
+  {% if next %}<a class="btn ghost small" href="{{ base }}?month={{ next }}">›</a>{% else %}<span class="btn ghost small disabled">›</span>{% endif %}
+</div>
+
+<div class="bill card">
+  <div class="bill-row"><span>{{ t('packets') }}</span><b>{{ s.packets }}</b></div>
+  <div class="bill-row"><span>{{ t('current_price') }}</span><b>{{ rupees(price) }} / {{ t('packet') }}</b></div>
+  <div class="bill-row total"><span>{{ t('total_amount') }}</span><b>{{ rupees(s.amount) }}</b></div>
+  <div class="bill-status {{ 'ok' if s.paid else 'due' }}">
+    {% if s.paid %}✓ {{ t('paid') }}{% if s.paid_on %} · {{ s.paid_on[:10] }}{% endif %}{% else %}{{ t('unpaid') }}{% endif %}
+  </div>
+</div>
+
+{% if s.mismatches %}<div class="notice wait">⚠ {{ t('mismatch_note', n=s.mismatches) }}</div>{% endif %}
+
+{% if not s.lines %}
+  <p class="empty">{{ t('no_entries_month') }}</p>
+{% else %}
+<div class="table-wrap">
+<table class="tbl">
+  <thead><tr><th>{{ t('date') }}</th><th>{{ t('customer_col') }}</th><th>{{ t('vendor_col') }}</th><th class="num">{{ t('amount') }}</th></tr></thead>
+  <tbody>
+  {% for l in s.lines %}
+    <tr class="st-{{ l.status }}">
+      <td>{{ l.day[8:] }}/{{ l.day[5:7] }}</td>
+      <td>{{ l.cust if l.cust is not none else '—' }}</td>
+      <td>{{ l.vendor if l.vendor is not none else '—' }}{% if l.status == 'mismatch' %} ⚠{% endif %}</td>
+      <td class="num">{{ rupees(l.amount) }}</td>
+    </tr>
+    {% if l.comment %}<tr class="comment-row"><td colspan="4">💬 {{ l.comment }}</td></tr>{% endif %}
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="hint">{{ t('billing_rule') }}</p>
+{% endif %}
+{% endblock %}

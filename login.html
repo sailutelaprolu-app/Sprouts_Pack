@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="welcome">
+  <img src="/static/icon-512.png" alt="" class="hero-logo" width="110" height="110">
+  <h1>{{ t('app_name') }}</h1>
+  <p class="muted">{{ t('tagline') }}</p>
+</section>
+<form method="post" class="card narrow" autocomplete="off">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="secret">{{ t('enter_secret') }}</label>
+  <input id="secret" name="secret" class="secret-input" placeholder="XXXXX-XXXXX" required
+         autocapitalize="characters" spellcheck="false" maxlength="20">
+  <button class="btn full" type="submit">{{ t('login') }}</button>
+  <p class="hint">{{ t('secret_hint') }}</p>
+</form>
+{% endblock %}

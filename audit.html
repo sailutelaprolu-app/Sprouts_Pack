@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2 class="section">{{ t('audit_title') }}</h2>
+<form method="get" class="filter">
+  <select name="vendor" onchange="this.form.submit()">
+    <option value="">{{ t('all_vendors') }}</option>
+    {% for v in vendors %}<option value="{{ v.id }}" {{ 'selected' if vid == v.id }}>{{ v.name }}</option>{% endfor %}
+  </select>
+</form>
+{% if not rows %}<p class="empty">{{ t('nothing_yet') }}</p>{% endif %}
+<ul class="log">
+{% for r in rows %}
+  <li>
+    <div class="log-top"><b>{{ t('act_' + r.action) }}</b><span class="muted small">{{ r.at }}</span></div>
+    <div class="small">{{ r.details }}</div>
+    <div class="muted small">{{ t('by') }} {{ r.actor_name or '—' }} ({{ t('role_' + (r.role or 'admin')) }}){% if r.vname %} · {{ r.vname }}{% endif %}</div>
+  </li>
+{% endfor %}
+</ul>
+{% endblock %}

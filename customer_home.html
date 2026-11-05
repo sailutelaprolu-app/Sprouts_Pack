@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+{% block content %}
+{% if pending %}
+<div class="card notice-card">
+  <h3>💰 {{ t('price_change_request') }}</h3>
+  <p>{{ t('price_change_text', old=rupees(pending.old_paise), new=rupees(pending.new_paise), day=pending.effective_from) }}</p>
+  <div class="row-actions">
+    <form method="post" action="/me/price/{{ pending.id }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="decision" value="accept">
+      <button class="btn small" type="submit">✓ {{ t('accept') }}</button>
+    </form>
+    <form method="post" action="/me/price/{{ pending.id }}" data-confirm="{{ t('confirm_reject') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="decision" value="reject">
+      <button class="btn ghost small" type="submit">✕ {{ t('reject') }}</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="stats">
+  <div class="stat"><b>{{ s.packets }}</b><span>{{ t('this_month_packets') }}</span></div>
+  <div class="stat"><b>{{ rupees(s.amount) }}</b><span>{{ t('this_month_amount') }}</span></div>
+</div>
+
+<form method="post" action="/me/entry" class="card stack entry-card">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h3>🌱 {{ t('record_packets') }}</h3>
+  <label>{{ t('date') }}
+    <input type="date" name="day" value="{{ edit_day }}" max="{{ today }}" required
+           onchange="location='/me?day='+this.value">
+  </label>
+  <label>{{ t('packets_received') }}
+    <div class="stepper">
+      <button type="button" class="step" data-step="-1">−</button>
+      <input type="number" name="packets" id="packets" min="0" max="999" inputmode="numeric" required
+             value="{{ existing.cust_packets if existing and existing.cust_packets is not none else 1 }}">
+      <button type="button" class="step" data-step="1">+</button>
+    </div>
+  </label>
+  <label>{{ t('comment_optional') }}
+    <textarea name="comment" rows="3" maxlength="2000">{{ existing.cust_comment if existing and existing.cust_comment else '' }}</textarea>
+  </label>
+  <div class="muted small">{{ t('your_price', price=rupees(price)) }}</div>
+  <button class="btn full" type="submit">{{ t('update_entry') if existing and existing.cust_packets is not none else t('save') }}</button>
+</form>
+
+<h2 class="section">{{ t('recent_entries') }}</h2>
+{% if not recent %}<p class="empty">{{ t('nothing_yet') }}</p>{% endif %}
+<ul class="mini-list entries">
+{% for r in recent %}
+  <li class="st-{{ r.status }}">
+    <a href="/me?day={{ r.e.day }}">
+      <span>{{ r.e.day }}</span>
+      <span>{{ t('you') }}: <b>{{ r.e.cust_packets if r.e.cust_packets is not none else '—' }}</b> · {{ t('vendor') }}: <b>{{ r.e.vendor_packets if r.e.vendor_packets is not none else '—' }}</b>
+      {% if r.status == 'mismatch' %}⚠{% elif r.status == 'match' %}✓{% endif %}{% if r.locked %} 🔒{% endif %}</span>
+    </a>
+  </li>
+{% endfor %}
+</ul>
+{% endblock %}

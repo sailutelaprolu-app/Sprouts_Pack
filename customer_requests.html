@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block content %}
+<form method="post" class="card stack">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h3>💬 {{ t('send_request') }}</h3>
+  <p class="hint">{{ t('request_hint') }}</p>
+  <textarea name="text" rows="3" maxlength="1000" required></textarea>
+  <button class="btn" type="submit">{{ t('send') }}</button>
+</form>
+
+<h2 class="section">{{ t('my_requests') }}</h2>
+{% if not rows %}<p class="empty">{{ t('no_requests') }}</p>{% endif %}
+{% for r in rows %}
+<div class="card item">
+  <div class="item-head">
+    <span class="muted small">{{ r.created_at }}</span>
+    <span class="pill {{ 'ok' if r.status == 'done' else 'wait' }}">{{ t('rs_' + r.status) }}</span>
+  </div>
+  <p class="req-text">{{ r.text }}</p>
+  {% if r.reply %}<div class="reply small">↩ {{ t('vendor') }}: {{ r.reply }}</div>{% endif %}
+</div>
+{% endfor %}
+{% endblock %}

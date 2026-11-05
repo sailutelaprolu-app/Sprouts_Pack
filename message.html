@@ -1,0 +1,8 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card narrow center">
+  <h2>{{ title }}</h2>
+  {% if body %}<p class="muted">{{ body }}</p>{% endif %}
+  <a class="btn" href="/">{{ t('go_home') }}</a>
+</section>
+{% endblock %}
