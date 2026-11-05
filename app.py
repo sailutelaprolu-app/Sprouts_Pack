@@ -776,18 +776,36 @@ def vendor_reply_request(rid):
 def customer_home():
     cid = session["uid"]
     conn = db()
-    recent = conn.execute("SELECT * FROM entries WHERE customer_id=? ORDER BY day DESC LIMIT 7", (cid,)).fetchall()
-    recent = [{"e": e, "status": entry_status(e), "locked": month_is_paid(cid, e["day"])} for e in recent]
+    td = today().isoformat()
     pending = conn.execute("SELECT * FROM price_changes WHERE customer_id=? AND status='pending'",
                            (cid,)).fetchone()
-    edit_day = parse_day(request.args.get("day"), today())
-    if edit_day > today():
-        edit_day = today()
-    existing = conn.execute("SELECT * FROM entries WHERE customer_id=? AND day=?",
-                            (cid, edit_day.isoformat())).fetchone()
+    today_entry = conn.execute("SELECT * FROM entries WHERE customer_id=? AND day=?", (cid, td)).fetchone()
+    # days where the customer's and vendor's counts differ: the only past days the customer may correct
+    disputes = [e for e in conn.execute(
+        "SELECT * FROM entries WHERE customer_id=? AND day<? AND cust_packets IS NOT NULL "
+        "AND vendor_packets IS NOT NULL AND cust_packets<>vendor_packets ORDER BY day DESC LIMIT 31",
+        (cid, td)).fetchall() if not month_is_paid(cid, e["day"])]
+    recent = conn.execute("SELECT * FROM entries WHERE customer_id=? AND day<? ORDER BY day DESC LIMIT 7",
+                          (cid, td)).fetchall()
+    recent = [{"e": e, "status": entry_status(e)} for e in recent]
     s = month_statement(cid, today().strftime("%Y-%m"))
-    return render_template("customer_home.html", recent=recent, pending=pending, price=current_price(cid),
-                           edit_day=edit_day.isoformat(), existing=existing, s=s)
+    return render_template("customer_home.html", pending=pending, price=current_price(cid), s=s,
+                           today_entry=today_entry, today_status=entry_status(today_entry) if today_entry else "none",
+                           today_open=customer_can_edit(cid, td, today_entry),
+                           today_paid=month_is_paid(cid, td), disputes=disputes, recent=recent)
+
+
+def customer_can_edit(cid, day_str, entry):
+    """Rules for the customer:
+    - today: can enter once; after saving it is locked
+    - any day where vendor and customer counts differ (dispute): can update
+    - a missed day: the vendor's count is final, the customer cannot enter it
+    - a paid month: nothing can change"""
+    if month_is_paid(cid, day_str):
+        return False
+    if entry is not None and entry_status(entry) == "mismatch":
+        return True
+    return day_str == today().isoformat() and (entry is None or entry["cust_packets"] is None)
 
 
 @app.route("/me/entry", methods=["POST"])
@@ -800,19 +818,21 @@ def customer_save_entry():
     if not day or day > today():
         flash(t("date_not_future"), "error")
         return redirect(url_for("customer_home"))
+    ds = day.isoformat()
+    existing = db().execute("SELECT * FROM entries WHERE customer_id=? AND day=?", (cid, ds)).fetchone()
+    if not customer_can_edit(cid, ds, existing):
+        flash(t("month_locked") if month_is_paid(cid, ds) else t("entry_locked"), "error")
+        return redirect(url_for("customer_home"))
     if not raw.isdigit() or int(raw) > 999:
         flash(t("packets_invalid"), "error")
-        return redirect(url_for("customer_home", day=day.isoformat()))
-    ds = day.isoformat()
-    if month_is_paid(cid, ds):
-        flash(t("month_locked"), "error")
         return redirect(url_for("customer_home"))
     db().execute(
         "INSERT INTO entries (customer_id, day, cust_packets, cust_comment, cust_at) VALUES (?,?,?,?,?) "
         "ON CONFLICT(customer_id, day) DO UPDATE SET cust_packets=excluded.cust_packets, "
-        "cust_comment=excluded.cust_comment, cust_at=excluded.cust_at",
+        "cust_comment=COALESCE(excluded.cust_comment, entries.cust_comment), cust_at=excluded.cust_at",
         (cid, ds, int(raw), comment or None, stamp()))
-    audit("customer_entry", f"{session['name']}: {ds} = {raw}")
+    was_dispute = existing is not None and entry_status(existing) == "mismatch"
+    audit("customer_entry", f"{session['name']}: {ds} = {raw}" + (" (dispute update)" if was_dispute else ""))
     db().commit()
     flash(t("entry_saved"), "ok")
     return redirect(url_for("customer_home"))

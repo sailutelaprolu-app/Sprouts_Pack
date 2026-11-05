@@ -10,7 +10,7 @@
   // + / - buttons for packet count
   document.querySelectorAll(".step").forEach(function (b) {
     b.addEventListener("click", function () {
-      var input = document.getElementById("packets");
+      var input = document.getElementById(b.getAttribute("data-for") || "packets");
       var v = parseInt(input.value || "0", 10) + parseInt(b.getAttribute("data-step"), 10);
       input.value = Math.max(0, Math.min(999, v));
     });
@@ -27,6 +27,13 @@
       };
       if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {});
       else { var box = document.getElementById("secretBox"); window.getSelection().selectAllChildren(box); document.execCommand("copy"); done(); }
+    });
+  });
+
+  // Ask once before a final submit (it cannot be changed afterwards)
+  document.querySelectorAll("[data-confirm-click]").forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      if (!confirm(b.getAttribute("data-confirm-click"))) e.preventDefault();
     });
   });
 

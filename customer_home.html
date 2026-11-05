@@ -24,38 +24,94 @@
   <div class="stat"><b>{{ rupees(s.amount) }}</b><span>{{ t('this_month_amount') }}</span></div>
 </div>
 
-<form method="post" action="/me/entry" class="card stack entry-card">
+{# ---------- today's entry ---------- #}
+{% if today_open %}
+<form method="post" action="/me/entry" class="card stack entry-card {{ 'dispute' if today_status == 'mismatch' }}">
   <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="day" value="{{ today }}">
   <h3>🌱 {{ t('record_packets') }}</h3>
-  <label>{{ t('date') }}
-    <input type="date" name="day" value="{{ edit_day }}" max="{{ today }}" required
-           onchange="location='/me?day='+this.value">
-  </label>
+  <div class="today-date">📅 {{ t('today_label') }} · {{ today[8:] }}/{{ today[5:7] }}/{{ today[:4] }}</div>
+  {% if today_status == 'mismatch' %}
+    <div class="notice wait">⚠ {{ t('dispute_text', you=today_entry.cust_packets, vendor=today_entry.vendor_packets) }}</div>
+  {% endif %}
   <label>{{ t('packets_received') }}
     <div class="stepper">
-      <button type="button" class="step" data-step="-1">−</button>
+      <button type="button" class="step" data-step="-1" data-for="packets">−</button>
       <input type="number" name="packets" id="packets" min="0" max="999" inputmode="numeric" required
-             value="{{ existing.cust_packets if existing and existing.cust_packets is not none else 1 }}">
-      <button type="button" class="step" data-step="1">+</button>
+             value="{{ today_entry.cust_packets if today_entry and today_entry.cust_packets is not none else 1 }}">
+      <button type="button" class="step" data-step="1" data-for="packets">+</button>
     </div>
   </label>
   <label>{{ t('comment_optional') }}
-    <textarea name="comment" rows="3" maxlength="2000">{{ existing.cust_comment if existing and existing.cust_comment else '' }}</textarea>
+    <textarea name="comment" rows="3" maxlength="2000">{{ today_entry.cust_comment if today_entry and today_entry.cust_comment else '' }}</textarea>
   </label>
   <div class="muted small">{{ t('your_price', price=rupees(price)) }}</div>
-  <button class="btn full" type="submit">{{ t('update_entry') if existing and existing.cust_packets is not none else t('save') }}</button>
+  {% if today_status == 'mismatch' %}
+    <button class="btn full" type="submit">{{ t('update_entry') }}</button>
+  {% else %}
+    <p class="hint">{{ t('submit_once_hint') }}</p>
+    <button class="btn full" type="submit" data-confirm-click="{{ t('confirm_submit') }}">{{ t('submit') }}</button>
+  {% endif %}
 </form>
+{% else %}
+<div class="card locked-card">
+  <div class="ghost-form" aria-hidden="true">
+    <h3>🌱 {{ t('record_packets') }}</h3>
+    <div class="stepper"><span class="step">−</span><span class="fake-input">{{ today_entry.cust_packets if today_entry and today_entry.cust_packets is not none else '—' }}</span><span class="step">+</span></div>
+    <div class="fake-area"></div>
+    <div class="fake-btn"></div>
+  </div>
+  <div class="locked-overlay">
+    {% if today_entry and today_entry.cust_packets is not none %}
+      <div class="lock-ico">✓</div>
+      <b>{{ t('submitted_today', n=today_entry.cust_packets) }}</b>
+      <span class="small">
+        {% if today_status == 'match' %}✓ {{ t('vendor_confirmed') }}
+        {% elif today_status == 'customer_only' %}⏳ {{ t('waiting_vendor') }}{% endif %}
+      </span>
+    {% else %}
+      <div class="lock-ico">🔒</div>
+      <b>{{ t('month_locked') }}</b>
+    {% endif %}
+    <span class="small muted">{{ t('next_day_hint') }}</span>
+  </div>
+</div>
+{% endif %}
 
+{# ---------- disputes on earlier days ---------- #}
+{% if disputes %}
+<h2 class="section">⚠ {{ t('disputes_title') }}</h2>
+{% for e in disputes %}
+<form method="post" action="/me/entry" class="card stack dispute">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="day" value="{{ e.day }}">
+  <div class="item-head">
+    <b>📅 {{ e.day[8:] }}/{{ e.day[5:7] }}/{{ e.day[:4] }}</b>
+    <span class="pill wait">{{ t('dispute') }}</span>
+  </div>
+  <div class="small">{{ t('dispute_text', you=e.cust_packets, vendor=e.vendor_packets) }}</div>
+  <div class="stepper">
+    <button type="button" class="step" data-step="-1" data-for="d{{ loop.index }}">−</button>
+    <input type="number" name="packets" id="d{{ loop.index }}" min="0" max="999" inputmode="numeric" required value="{{ e.cust_packets }}">
+    <button type="button" class="step" data-step="1" data-for="d{{ loop.index }}">+</button>
+  </div>
+  <button class="btn small" type="submit">{{ t('update_entry') }}</button>
+</form>
+{% endfor %}
+{% endif %}
+
+{# ---------- earlier days (read-only) ---------- #}
 <h2 class="section">{{ t('recent_entries') }}</h2>
+<p class="hint">{{ t('missed_day_rule') }}</p>
 {% if not recent %}<p class="empty">{{ t('nothing_yet') }}</p>{% endif %}
 <ul class="mini-list entries">
 {% for r in recent %}
   <li class="st-{{ r.status }}">
-    <a href="/me?day={{ r.e.day }}">
-      <span>{{ r.e.day }}</span>
+    <div class="entry-row">
+      <span>{{ r.e.day[8:] }}/{{ r.e.day[5:7] }}</span>
       <span>{{ t('you') }}: <b>{{ r.e.cust_packets if r.e.cust_packets is not none else '—' }}</b> · {{ t('vendor') }}: <b>{{ r.e.vendor_packets if r.e.vendor_packets is not none else '—' }}</b>
-      {% if r.status == 'mismatch' %}⚠{% elif r.status == 'match' %}✓{% endif %}{% if r.locked %} 🔒{% endif %}</span>
-    </a>
+      {% if r.status == 'mismatch' %}⚠{% else %}🔒{% endif %}</span>
+    </div>
   </li>
 {% endfor %}
 </ul>

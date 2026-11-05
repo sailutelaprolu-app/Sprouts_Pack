@@ -77,7 +77,7 @@ Rules built into the app. ✅ = you decided. ❓ = I chose a sensible default �
 | 10 | **The bill uses the customer's count.** If the customer didn't enter a day, the vendor's count is used | ❓ |
 | 11 | **Price changes need the customer's approval.** Vendor sets new price + start date (today or later); it applies only after the customer taps Accept. If rejected, the old price stays | ❓ |
 | 12 | When a month is marked **Paid**, it is locked: nobody can change entries in that month (vendor can mark Unpaid to unlock) | ❓ |
-| 13 | Customers can enter any past date (not future dates) and correct their own entry until the month is paid | ❓ |
+| 13 | **Customer submits once a day.** After submitting, today's card is blurred and locked. If the vendor's count matches, it stays locked for good. Only if the counts differ (dispute) does **Update** appear, and it locks again once they match. If the customer misses a day, the vendor's count becomes final from the next day and the customer cannot change it | ✅ |
 | 14 | Customer requests are free text (e.g. "extra packets Sunday"); vendor can reply and mark done | ❓ |
 | 15 | Deactivating a vendor also blocks all their customers from logging in | ❓ |
 | 16 | 10 wrong Secret ID attempts → that device waits 15 minutes | ❓ |
